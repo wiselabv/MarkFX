@@ -124,6 +124,10 @@ PRODUCT.md           产品定位与设计原则
 - 大型 Excalidraw 画布与复杂 Mermaid 文档可能占用较多内存
 - 安装包尚未配置商业代码签名证书
 
+## 安全
+
+安全漏洞请按照 [安全策略](SECURITY.md) 私下报告，不要通过公开 Issue 发布尚未修复的漏洞细节。
+
 ## 许可证
 
 MarkFX 基于 [MIT License](LICENSE) 开源。
