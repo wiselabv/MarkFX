@@ -24,12 +24,13 @@ if (!env.TAURI_SIGNING_PRIVATE_KEY) {
   console.log(`已从 ${keyDir} 载入更新签名密钥`)
 }
 
-function run(command, args) {
-  const executable = process.platform === 'win32' ? `${command}.cmd` : command
-  const result = spawnSync(executable, args, { stdio: 'inherit', env, shell: false })
+function run(command) {
+  // 单条命令字符串 + shell，避免 Windows 上直接 spawn npm.cmd 报 EINVAL，
+  // 也避免 Node 对「参数数组 + shell」发出的 DEP0190 告警。命令均为固定字面量。
+  const result = spawnSync(command, { stdio: 'inherit', env, shell: true })
   if (result.status !== 0)
     process.exit(result.status ?? 1)
 }
 
-run('npm', ['run', 'icons'])
-run('npx', ['tauri', 'build'])
+run('npm run icons')
+run('npx tauri build')
