@@ -471,7 +471,7 @@ defineExpose({ finishRecording })
   height: 17px;
   flex: 0 0 auto;
   border-radius: 10px;
-  background: var(--border-strong);
+  background: var(--switch-track);
   transition: background 160ms ease;
 }
 

@@ -3,16 +3,23 @@ import { computed, defineAsyncComponent, onMounted, onUnmounted, shallowRef, use
 import { storeToRefs } from 'pinia'
 import { useEventListener, useLocalStorage } from '@vueuse/core'
 import { AlertCircle, X } from 'lucide-vue-next'
+import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { disable, enable, isEnabled } from '@tauri-apps/plugin-autostart'
 import AppSidebar from './components/shell/AppSidebar.vue'
 import AppTitlebar from './components/shell/AppTitlebar.vue'
 import AppToolbar from './components/shell/AppToolbar.vue'
+import DocumentNotice from './components/shell/DocumentNotice.vue'
+import UpdateNotice from './components/shell/UpdateNotice.vue'
 import MarkdownEditor from './components/editor/MarkdownEditor.vue'
 import DocumentOutline from './components/outline/DocumentOutline.vue'
 import SettingsPanel from './components/settings/SettingsPanel.vue'
 import { formatShortcut, useShortcuts } from './composables/useShortcuts'
 import type { ShortcutId } from './composables/useShortcuts'
+import { useUpdater } from './composables/useUpdater'
+import { isTauri } from './utils/env'
 import { useDocumentStore } from './stores/document'
 import { isThemeId, themes } from './themes'
 import type { ThemeId } from './themes'
@@ -29,6 +36,8 @@ const {
   isBusy,
   isDirty,
   recentFiles,
+  recoveryDraft,
+  conflictMessage,
   windowTitle,
 } = storeToRefs(documentStore)
 
@@ -39,6 +48,7 @@ const settingsOpen = shallowRef(false)
 const settingsPanel = useTemplateRef<InstanceType<typeof SettingsPanel>>('settingsPanel')
 const markdownEditor = useTemplateRef<InstanceType<typeof MarkdownEditor>>('markdownEditor')
 const { bindings, matches, resetAll, resetBinding, setBinding } = useShortcuts()
+const updater = useUpdater()
 const autostartEnabled = shallowRef(false)
 const autostartBusy = shallowRef(false)
 const closeToTrayEnabled = useLocalStorage('markfx:close-to-tray', true)
@@ -94,6 +104,8 @@ useEventListener(window, 'keydown', event => {
 })
 watch(windowTitle, title => {
   document.title = title
+  if (!isTauri())
+    return
   void getCurrentWindow().setTitle(title).catch(() => undefined)
 }, { immediate: true })
 
@@ -140,9 +152,42 @@ function updateShortcut(id: ShortcutId, binding: string) {
 }
 
 let unlistenClose: (() => void) | undefined
+let unlistenOpenFile: (() => void) | undefined
+let unlistenDragDrop: (() => void) | undefined
+
+async function openFromSystem(path: string | null | undefined) {
+  if (!path)
+    return
+
+  if (isDirty.value && !await confirmDiscardChanges())
+    return
+
+  await documentStore.openDocument(path)
+}
+
+function confirmDiscardChanges() {
+  return Promise.resolve(window.confirm('当前文档有未保存的更改，继续打开其他文件会丢弃这些更改。是否继续？'))
+}
 
 onMounted(async () => {
+  void documentStore.checkForRecoveryDraft()
   autostartEnabled.value = await isEnabled().catch(() => false)
+  if (!isTauri())
+    return
+
+  void invoke<string | null>('initial_open_path')
+    .then(path => openFromSystem(path))
+    .catch(() => undefined)
+
+  unlistenOpenFile = await listen<string>('markfx://open-file', event => {
+    void openFromSystem(event.payload)
+  })
+
+  unlistenDragDrop = await getCurrentWebview().onDragDropEvent(event => {
+    if (event.payload.type === 'drop')
+      void openFromSystem(event.payload.paths[0])
+  })
+
   unlistenClose = await getCurrentWindow().onCloseRequested(async event => {
     if (!closeToTrayEnabled.value)
       return
@@ -150,9 +195,17 @@ onMounted(async () => {
     event.preventDefault()
     await getCurrentWindow().hide()
   })
+
+  window.setTimeout(() => {
+    void updater.checkForUpdate()
+  }, 8000)
 })
 
-onUnmounted(() => unlistenClose?.())
+onUnmounted(() => {
+  unlistenClose?.()
+  unlistenOpenFile?.()
+  unlistenDragDrop?.()
+})
 
 function insertDrawing(markdown: string) {
   documentStore.setContent(`${content.value.trimEnd()}\n${markdown}`)
@@ -227,6 +280,28 @@ function insertDrawing(markdown: string) {
       @toggle-autostart="toggleAutostart"
       @toggle-close-to-tray="closeToTrayEnabled = !closeToTrayEnabled"
       @toggle-outline="outlineVisible = !outlineVisible"
+    />
+
+    <DocumentNotice
+      :recovery="recoveryDraft"
+      :conflict="conflictMessage"
+      @recover="documentStore.recoverDraft()"
+      @discard="documentStore.discardDraft()"
+      @overwrite="documentStore.overwriteDocument()"
+      @reload="documentStore.reloadFromDisk()"
+      @save-as="documentStore.saveDocument(true)"
+      @dismiss-conflict="documentStore.dismissConflict()"
+    />
+
+    <UpdateNotice
+      v-if="updater.available.value"
+      :version="updater.available.value.version"
+      :notes="updater.available.value.notes"
+      :status="updater.status.value"
+      :progress="updater.progress.value"
+      :error-message="updater.errorMessage.value"
+      @install="updater.installUpdate()"
+      @dismiss="updater.dismiss()"
     />
 
     <Transition name="notice">

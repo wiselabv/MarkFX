@@ -35,6 +35,10 @@ import {
 } from 'lucide-vue-next'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/frame.css'
+import MermaidLightbox from './MermaidLightbox.vue'
+import { mermaidSvgFromClick, storeMermaidSvg } from './mermaidPreview'
+import { createMermaidRenderer } from './mermaidRender'
+import type { MermaidApi } from './mermaidRender'
 
 const model = defineModel<string>({ required: true })
 
@@ -42,10 +46,16 @@ const editorRoot = useTemplateRef<HTMLDivElement>('editorRoot')
 const contextMenu = useTemplateRef<HTMLDivElement>('contextMenu')
 const crepe = shallowRef<Crepe | null>(null)
 const isReady = shallowRef(false)
+const lightboxSvg = shallowRef<string | null>(null)
 const menu = reactive({ open: false, x: 0, y: 0 })
 
-let mermaidRenderId = 0
-let toolbarObserver: MutationObserver | null = null
+let labelsObserver: MutationObserver | null = null
+let labelsFrame = 0
+
+const mermaidRenderer = createMermaidRenderer(async () => {
+  const { default: mermaid } = await import('mermaid')
+  return mermaid as unknown as MermaidApi
+})
 
 const toolbarHints = [
   '粗体（Ctrl+B）',
@@ -56,15 +66,48 @@ const toolbarHints = [
   '插入链接（Ctrl+K）',
 ]
 
-function applyToolbarHints() {
-  const buttons = editorRoot.value?.querySelectorAll<HTMLButtonElement>('.milkdown-toolbar .toolbar-item')
-  buttons?.forEach((button, index) => {
+function applyAccessibleLabels() {
+  const root = editorRoot.value
+  if (!root)
+    return
+
+  const buttons = root.querySelectorAll<HTMLButtonElement>('.milkdown-toolbar .toolbar-item')
+  buttons.forEach((button, index) => {
     const hint = toolbarHints[index]
     if (!hint)
       return
 
     button.title = hint
     button.setAttribute('aria-label', hint)
+  })
+
+  const latexConfirm = root.querySelector<HTMLButtonElement>('.milkdown-latex-inline-edit .container button')
+  if (latexConfirm) {
+    latexConfirm.title = '确认公式'
+    latexConfirm.setAttribute('aria-label', '确认公式')
+  }
+}
+
+const LABEL_HOST_SELECTORS = ['.milkdown-toolbar', '.milkdown-latex-inline-edit']
+
+function touchesLabelHost(node: Node) {
+  const element = node instanceof Element ? node : node.parentElement
+  if (!element)
+    return false
+
+  return LABEL_HOST_SELECTORS.some(selector => element.closest(selector) !== null || element.querySelector(selector) !== null)
+}
+
+function scheduleAccessibleLabels(records?: MutationRecord[]) {
+  if (records && !records.some(record => touchesLabelHost(record.target) || Array.from(record.addedNodes).some(touchesLabelHost)))
+    return
+
+  if (labelsFrame)
+    return
+
+  labelsFrame = requestAnimationFrame(() => {
+    labelsFrame = 0
+    applyAccessibleLabels()
   })
 }
 
@@ -99,6 +142,12 @@ function openContextMenu(event: MouseEvent) {
 
 function closeContextMenu() {
   menu.open = false
+}
+
+function onEditorClick(event: MouseEvent) {
+  const svg = mermaidSvgFromClick(event.target)
+  if (svg)
+    lightboxSvg.value = svg
 }
 
 function setHeading(level: 1 | 2 | 3 | 4 | 5 | 6) {
@@ -143,6 +192,30 @@ useEventListener(window, 'blur', closeContextMenu)
 useEventListener(window, 'resize', closeContextMenu)
 useEventListener(window, 'scroll', closeContextMenu, { capture: true })
 
+function buildPreviewHost(svg: string) {
+  const host = document.createElement('div')
+  host.className = 'mermaid-preview-host'
+  host.innerHTML = svg
+
+  const zoomButton = document.createElement('button')
+  zoomButton.type = 'button'
+  zoomButton.className = 'mermaid-zoom-button'
+  zoomButton.textContent = '放大查看'
+  zoomButton.setAttribute('aria-label', '放大查看 Mermaid 图表')
+  host.appendChild(zoomButton)
+
+  return host
+}
+
+function buildErrorView(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+  const errorView = document.createElement('div')
+  errorView.className = 'mermaid-preview-error'
+  errorView.textContent = `Mermaid 图表无法渲染：${message}`
+
+  return errorView
+}
+
 function renderCodePreview(
   language: string,
   content: string,
@@ -151,29 +224,14 @@ function renderCodePreview(
   if (language.toLowerCase() !== 'mermaid')
     return null
 
-  void (async () => {
-    try {
-      const { default: mermaid } = await import('mermaid')
-      const isDark = document.documentElement.classList.contains('dark')
+  const isDark = document.documentElement.classList.contains('dark')
 
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: 'strict',
-        theme: isDark ? 'dark' : 'default',
-      })
-
-      const id = `markfx-mermaid-${++mermaidRenderId}`
-      const { svg } = await mermaid.render(id, content)
-      applyPreview(svg)
-    }
-    catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      const errorView = document.createElement('div')
-      errorView.className = 'mermaid-preview-error'
-      errorView.textContent = `Mermaid 图表无法渲染：${message}`
-      applyPreview(errorView)
-    }
-  })()
+  void mermaidRenderer.render(content, isDark).then(({ id, svg }) => {
+    storeMermaidSvg(id, svg)
+    applyPreview(buildPreviewHost(svg))
+  }).catch((error) => {
+    applyPreview(buildErrorView(error))
+  })
 }
 
 onMounted(async () => {
@@ -210,9 +268,9 @@ onMounted(async () => {
     })
     listener.mounted(() => {
       isReady.value = true
-      applyToolbarHints()
-      toolbarObserver = new MutationObserver(applyToolbarHints)
-      toolbarObserver.observe(editorRoot.value!, { childList: true, subtree: true })
+      applyAccessibleLabels()
+      labelsObserver = new MutationObserver(scheduleAccessibleLabels)
+      labelsObserver.observe(editorRoot.value!, { childList: true, subtree: true })
     })
   })
 
@@ -221,8 +279,11 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(async () => {
-  toolbarObserver?.disconnect()
-  toolbarObserver = null
+  labelsObserver?.disconnect()
+  labelsObserver = null
+  if (labelsFrame)
+    cancelAnimationFrame(labelsFrame)
+  labelsFrame = 0
   await crepe.value?.destroy()
   crepe.value = null
 })
@@ -239,7 +300,14 @@ onBeforeUnmount(async () => {
       ref="editorRoot"
       class="editor-root"
       :class="{ 'is-ready': isReady }"
+      @click="onEditorClick"
       @contextmenu="openContextMenu"
+    />
+
+    <MermaidLightbox
+      v-if="lightboxSvg"
+      :svg="lightboxSvg"
+      @close="lightboxSvg = null"
     />
 
     <Teleport to="body">
@@ -505,6 +573,51 @@ onBeforeUnmount(async () => {
   display: block;
   max-width: 100%;
   height: auto;
+}
+
+.editor-root :global(.mermaid-preview-host) {
+  position: relative;
+  max-width: 100%;
+  cursor: zoom-in;
+}
+
+.editor-root :global(.mermaid-preview-host > svg) {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.editor-root :global(.mermaid-zoom-button) {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  height: 30px;
+  cursor: pointer;
+  align-items: center;
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-panel);
+  padding: 0 10px;
+  color: var(--text-primary);
+  font-family: Inter, ui-sans-serif, system-ui, "Microsoft YaHei UI", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+.editor-root :global(.mermaid-preview-host:hover .mermaid-zoom-button),
+.editor-root :global(.mermaid-zoom-button:focus-visible) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.editor-root :global(.mermaid-zoom-button:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .editor-root :deep(.mermaid-preview-error) {

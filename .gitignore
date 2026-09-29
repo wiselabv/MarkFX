@@ -14,6 +14,11 @@ src-tauri/target
 release
 *.local
 
+# 更新签名私钥：绝不入库
+*.key
+*.key.pub
+!*.key.pub.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

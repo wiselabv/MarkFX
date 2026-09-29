@@ -2,20 +2,23 @@
 import { onMounted, onUnmounted, shallowRef } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { Maximize2, Minus, Square, X } from 'lucide-vue-next'
+import { isTauri } from '../../utils/env'
 
 const props = defineProps<{
   fileName: string
   isDirty: boolean
 }>()
 
-const appWindow = getCurrentWindow()
+const appWindow = isTauri() ? getCurrentWindow() : null
 const isMaximized = shallowRef(false)
 
 async function syncMaximized() {
-  isMaximized.value = await appWindow.isMaximized().catch(() => false)
+  isMaximized.value = (await appWindow?.isMaximized().catch(() => false)) ?? false
 }
 
 async function toggleMaximize() {
+  if (!appWindow)
+    return
   await appWindow.toggleMaximize()
   await syncMaximized()
 }
@@ -29,7 +32,8 @@ let unlistenResize: (() => void) | undefined
 
 onMounted(async () => {
   await syncMaximized()
-  unlistenResize = await appWindow.onResized(syncMaximized)
+  if (appWindow)
+    unlistenResize = await appWindow.onResized(syncMaximized)
 })
 
 onUnmounted(() => unlistenResize?.())
@@ -53,7 +57,7 @@ onUnmounted(() => unlistenResize?.())
     </div>
 
     <div class="window-controls">
-      <button type="button" title="最小化" aria-label="最小化窗口" @click="appWindow.minimize()">
+      <button type="button" title="最小化" aria-label="最小化窗口" @click="appWindow?.minimize()">
         <Minus :size="16" :stroke-width="1.7" />
       </button>
       <button
@@ -65,7 +69,7 @@ onUnmounted(() => unlistenResize?.())
         <Square v-if="!isMaximized" :size="12" :stroke-width="1.7" />
         <Maximize2 v-else :size="13" :stroke-width="1.7" />
       </button>
-      <button class="close-button" type="button" title="关闭" aria-label="关闭窗口" @click="appWindow.close()">
+      <button class="close-button" type="button" title="关闭" aria-label="关闭窗口" @click="appWindow?.close()">
         <X :size="16" :stroke-width="1.7" />
       </button>
     </div>

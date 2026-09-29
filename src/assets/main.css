@@ -14,15 +14,16 @@
   --editor-paper: #ffffff;
   --text-primary: #20242c;
   --text-secondary: #5c6472;
-  --text-tertiary: #858d9a;
+  --text-tertiary: #67707d;
   --border-default: #dfe3e9;
   --border-strong: #c7cdd6;
-  --accent: #3d6fd6;
+  --accent: #376ad5;
   --accent-strong: #2855b2;
   --accent-soft: #dce7fb;
   --warning: #a96518;
   --danger: #c43d4b;
-  --focus-ring: rgb(61 111 214 / 34%);
+  --focus-ring: #376ad5;
+  --switch-track: #8391a4;
   --shadow-panel: 0 16px 44px rgb(31 38 51 / 12%), 0 2px 8px rgb(31 38 51 / 7%);
 }
 
@@ -44,7 +45,8 @@ html[data-theme='ink'] {
   --accent-soft: #263654;
   --warning: #e4ab59;
   --danger: #f1848e;
-  --focus-ring: rgb(132 167 255 / 40%);
+  --focus-ring: #84a7ff;
+  --switch-track: #5e6777;
   --shadow-panel: 0 18px 48px rgb(0 0 0 / 40%), 0 3px 12px rgb(0 0 0 / 30%);
 }
 
@@ -66,7 +68,8 @@ html[data-theme='pine'] {
   --accent-soft: #203c33;
   --warning: #d4a75f;
   --danger: #e88383;
-  --focus-ring: rgb(113 184 155 / 38%);
+  --focus-ring: #71b89b;
+  --switch-track: #546d62;
   --shadow-panel: 0 18px 48px rgb(3 10 8 / 44%), 0 3px 12px rgb(3 10 8 / 30%);
 }
 
@@ -80,7 +83,7 @@ html[data-theme='letterpress'] {
   --editor-paper: #faf8f3;
   --text-primary: #292725;
   --text-secondary: #625d57;
-  --text-tertiary: #8b8379;
+  --text-tertiary: #706961;
   --border-default: #d8d0c4;
   --border-strong: #bfb5a8;
   --accent: #a24732;
@@ -88,7 +91,8 @@ html[data-theme='letterpress'] {
   --accent-soft: #efdcd5;
   --warning: #98691f;
   --danger: #b33d45;
-  --focus-ring: rgb(162 71 50 / 34%);
+  --focus-ring: #a24732;
+  --switch-track: #998975;
   --shadow-panel: 0 16px 44px rgb(52 43 34 / 14%), 0 2px 8px rgb(52 43 34 / 8%);
 }
 

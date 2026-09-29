@@ -1,6 +1,6 @@
 [package]
 name = "markfx"
-version = "2.0.0"
+version = "2.3.0"
 description = "本地优先的桌面 Markdown 写作与绘图工具"
 authors = ["Suyal"]
 edition = "2021"
@@ -26,4 +26,7 @@ tauri-plugin-dialog = "2.7.1"
 tauri-plugin-fs = "2.5.1"
 thiserror = "2.0.18"
 tauri-plugin-autostart = "2.5.1"
+tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
