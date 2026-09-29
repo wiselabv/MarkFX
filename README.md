@@ -3,16 +3,16 @@
   <h1>MarkFX</h1>
   <p>本地优先的桌面 Markdown 写作与绘图工具</p>
 
-  [![Release](https://img.shields.io/github/v/release/WSYL011017/MarkFX?display_name=tag&sort=semver)](https://github.com/WSYL011017/MarkFX/releases/latest)
+  [![Release](https://img.shields.io/github/v/release/wiselabv/MarkFX?display_name=tag&sort=semver)](https://github.com/wiselabv/MarkFX/releases/latest)
   [![Platform](https://img.shields.io/badge/platform-Windows-0078D4)](#系统要求)
-  [![License](https://img.shields.io/github/license/WSYL011017/MarkFX)](LICENSE)
+  [![License](https://img.shields.io/github/license/wiselabv/MarkFX)](LICENSE)
 </div>
 
 MarkFX 面向持续写作、技术文档整理和结构图绘制场景。它直接读写标准 Markdown 文件，将文字编辑、文档导航、Mermaid 图表和 Excalidraw 绘图放进同一个安静、高效的桌面工作流。
 
 ## 下载
 
-前往 [Releases](https://github.com/WSYL011017/MarkFX/releases/latest) 下载最新版：
+前往 [Releases](https://github.com/wiselabv/MarkFX/releases/latest) 下载最新版：
 
 - `MarkFX_2.3.0_x64-setup.exe`：推荐，大多数 Windows 用户使用
 - `MarkFX_2.3.0_x64_en-US.msi`：适合 MSI 部署或集中管理

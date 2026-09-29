@@ -9,13 +9,13 @@
 | `2.0.x` | 支持 |
 | `1.x` 及更早版本 | 不支持 |
 
-安全支持范围可能随最新正式版本调整。建议始终使用 [最新 Release](https://github.com/WSYL011017/MarkFX/releases/latest)。
+安全支持范围可能随最新正式版本调整。建议始终使用 [最新 Release](https://github.com/wiselabv/MarkFX/releases/latest)。
 
 ## 报告安全漏洞
 
 请不要通过公开 Issue、Pull Request 或讨论区报告尚未修复的安全漏洞。
 
-请优先通过 GitHub 的 [Private vulnerability reporting](https://github.com/WSYL011017/MarkFX/security/advisories/new) 私下提交安全报告。如果该入口不可用，请联系仓库维护者并在报告中注明这是安全问题；不要在公开渠道粘贴漏洞利用代码、敏感日志或个人文件内容。
+请优先通过 GitHub 的 [Private vulnerability reporting](https://github.com/wiselabv/MarkFX/security/advisories/new) 私下提交安全报告。如果该入口不可用，请联系仓库维护者并在报告中注明这是安全问题；不要在公开渠道粘贴漏洞利用代码、敏感日志或个人文件内容。
 
 报告尽量包含以下信息：
 
@@ -36,7 +36,7 @@
 
 ## 供应链与发布安全
 
-- 只从本仓库的 [Releases](https://github.com/WSYL011017/MarkFX/releases) 下载安装包。
+- 只从本仓库的 [Releases](https://github.com/wiselabv/MarkFX/releases) 下载安装包。
 - 发布安装包当前可能未配置商业代码签名证书，Windows 可能显示未知发布者或 SmartScreen 提示。
 - 每个 Release 附带 `SHA256SUMS.txt`，安装前请比对安装包校验和。
 - 自动更新使用 minisign 签名校验：公钥内置于应用，签名不匹配的更新包会被拒绝安装。签发更新所需的私钥不随仓库分发，仅由维护者与发布流水线持有。
